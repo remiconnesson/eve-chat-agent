@@ -281,6 +281,95 @@ the hook with a fresh `initialSession`.
 - Deleting a conversation is just `DELETE FROM chat_sessions WHERE id = $1 AND
   visitor_id = $2`; the eve session ages out on its own.
 
+---
+
+## Deploy to Vercel
+
+With `withEve`, the Next.js app and the agent build and ship as **one** Vercel
+project. eve sessions run on managed Vercel Workflow in production, so there is
+no extra service to host for the transcript side of the history feature.
+
+### 1. Push the repo and import it
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+Import the repository at [vercel.com/new](https://vercel.com/new), or from the
+CLI:
+
+```bash
+pnpm dlx vercel link   # once, links the folder to a Vercel project
+pnpm dlx vercel        # preview deployment
+pnpm dlx vercel --prod # production deployment
+```
+
+Leave the framework preset on **Next.js**. The build command must stay
+`eve build && next build` (already set in `package.json`) so the `/eve/v1/*`
+routes exist in the output. A plain `next build` deploys a frontend that has
+nothing to talk to.
+
+### 2. Add the Neon integration
+
+In the Vercel project go to **Storage → Create Database → Neon** (or connect an
+existing Neon project via the Marketplace). This injects `DATABASE_URL` into
+every environment, which is all `lib/db/index.ts` needs.
+
+Then create the history table once, in the Neon SQL editor or with `psql`:
+
+```sql
+CREATE TABLE IF NOT EXISTS chat_sessions (
+  id                  uuid PRIMARY KEY,
+  visitor_id          text NOT NULL,
+  title               text NOT NULL,
+  workflow_session_id text,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now()
+);
+```
+
+### 3. Environment variables
+
+| Variable                     | Needed? | Notes                                                                                            |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`               | yes     | Set by the Neon integration.                                                                     |
+| `AI_GATEWAY_API_KEY`         | no      | Vercel AI Gateway authenticates via OIDC on Vercel deployments; nothing to add.                  |
+| `ROUTE_AUTH_BASIC_PASSWORD`  | no      | Only if you switch the channel to `httpBasic()` (see below).                                     |
+
+### 4. Decide who can reach the chat
+
+`agent/channels/eve.ts` ends with `none()`, so the deployed chat is fully
+public and anyone with the URL can talk to the agent. Two ways to lock it down:
+
+- **Shared password** — swap `none()` for
+  `httpBasic({ username: "demo", password: process.env.ROUTE_AUTH_BASIC_PASSWORD! })`
+  and set that env var in Vercel.
+- **Vercel Deployment Protection** — Project → Settings → Deployment
+  Protection. Gates every page (and the `/eve/v1/*` routes) behind Vercel
+  authentication or a password without touching code.
+
+Whatever you pick, keep `vercelOidc()` and `localDev()` in front so previews
+and local dev keep working.
+
+### 5. Verify the deployment
+
+1. Open the production URL, send a message, confirm a streamed reply.
+2. `curl https://<your-app>.vercel.app/eve/v1/health` returns `200` (this
+   route is always public).
+3. Reload; the sidebar still lists the conversation and clicking it replays
+   the transcript.
+4. Project → **Workflows** in the Vercel dashboard shows one run per eve
+   session if you want to inspect them.
+
+### Gotchas
+
+- `.eve/`, `.output/`, and `.vercel/` are git-ignored on purpose. Local dev
+  writes thousands of stream-chunk files under `.eve/.workflow-data`; if a
+  publish ever fails on file count, delete that directory (it is only local run
+  state).
+- If you put a proxy or rewrite in front of the app, forward both `/eve/` and
+  `/.well-known/workflow/`. Runs stall without the second one.
+- Node 24 is required; Vercel picks it up from `engines.node` in
+  `package.json`.
+
 ## Project layout
 
 ```
