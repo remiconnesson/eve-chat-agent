@@ -155,13 +155,10 @@ export function ChatWorkspace() {
 
         <Separator className="bg-sidebar-foreground/10" />
 
-        <nav
-          aria-label="Conversation history"
-          className="rainbow-surface mx-2 my-3 min-h-0 flex-1 overflow-y-auto rounded-xl px-2 py-4"
-        >
-          <div className="flex items-center gap-2 px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider">
-            <HistoryIcon className="size-3.5 text-sidebar-foreground/70" aria-hidden="true" />
-            <span className="rainbow-text">Recent</span>
+        <nav aria-label="Conversation history" className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+          <div className="flex items-center gap-2 px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/45">
+            <HistoryIcon className="size-3.5" aria-hidden="true" />
+            Recent
           </div>
           <div className="flex flex-col gap-1">
             {isLoading ? (
@@ -182,7 +179,7 @@ export function ChatWorkspace() {
                   aria-current={active ? "page" : undefined}
                   className={`group flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors ${
                     active
-                      ? "rainbow-edge bg-sidebar-foreground/10 text-sidebar-foreground"
+                      ? "bg-sidebar-foreground/10 text-sidebar-foreground"
                       : "text-sidebar-foreground/65 hover:bg-sidebar-foreground/5 hover:text-sidebar-foreground"
                   }`}
                   key={chat.id}
