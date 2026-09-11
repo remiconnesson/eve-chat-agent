@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { useEveAgent } from "eve/react"
 import {
+  AlertTriangleIcon,
   BotIcon,
   HistoryIcon,
   MenuIcon,
@@ -509,9 +510,23 @@ function ChatThread({
               )}
             </InputGroupAddon>
           </InputGroup>
-          <p className="px-2 text-center text-[11px] text-muted-foreground">
-            Public demo — do not share confidential information.
-          </p>
+          <div className="flex items-center justify-between gap-3 px-2 text-[11px] text-muted-foreground">
+            <p>Public demo — do not share confidential information.</p>
+            <button
+              className="inline-flex shrink-0 items-center gap-1.5 hover:text-foreground"
+              disabled={!chat.workflowSessionId || isBusy}
+              onClick={async () => {
+                if (!chat.workflowSessionId) return
+                await agent.send("Use the flag_conversation tool now. Do not explain.")
+                onHistoryChanged()
+              }}
+              title="Remove this conversation from shared history"
+              type="button"
+            >
+              <AlertTriangleIcon className="size-3" aria-hidden="true" />
+              Flag
+            </button>
+          </div>
         </form>
       </div>
     </div>
