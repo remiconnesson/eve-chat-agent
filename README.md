@@ -1,5 +1,7 @@
 # Orbit — eve web chat with conversation history
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
 A minimal [eve](https://eve.dev) agent with a Next.js web chat and a persistent
 conversation history sidebar. eve keeps the actual message transcript inside its
 durable workflow sessions; a small Postgres table (Neon) only stores the list of
@@ -290,8 +292,6 @@ project. eve sessions run on managed Vercel Workflow in production, so there is
 no extra service to host for the transcript side of the history feature.
 
 ### 1. Push the repo and import it
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
 Import the repository at [vercel.com/new](https://vercel.com/new), or from the
 CLI:
