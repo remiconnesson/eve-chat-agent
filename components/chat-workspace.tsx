@@ -17,6 +17,8 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import useSWR from "swr"
 
+import { defaultModelId, MODEL_HEADER, models, type ModelId } from "@/agent/lib/models"
+import { ModelPicker } from "@/components/model-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -93,6 +95,8 @@ export function ChatWorkspace() {
   )
   const [selectedChat, setSelectedChat] = useState<ChatSummary>(newDraft)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [modelId, setModelId] = useState<ModelId>(defaultModelId)
+  const activeModel = models.find((model) => model.id === modelId) ?? models[0]
 
   const createNewChat = () => {
     setSelectedChat(newDraft())
@@ -222,7 +226,9 @@ export function ChatWorkspace() {
             </Button>
             <div className="min-w-0">
               <h1 className="truncate font-sans text-sm font-semibold">{selectedChat.title}</h1>
-              <p className="text-xs text-muted-foreground">Resumable eve session</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Resumable eve session · {activeModel.vendor} {activeModel.label}
+              </p>
             </div>
           </div>
           <Badge variant="secondary">
@@ -234,8 +240,10 @@ export function ChatWorkspace() {
         <ChatThread
           chat={selectedChat}
           key={selectedChat.id}
+          modelId={modelId}
           onChatUpdated={updateSelectedChat}
           onHistoryChanged={() => void mutate()}
+          onModelChange={setModelId}
         />
       </section>
     </main>
@@ -244,16 +252,25 @@ export function ChatWorkspace() {
 
 function ChatThread({
   chat,
+  modelId,
   onChatUpdated,
   onHistoryChanged,
+  onModelChange,
 }: {
   chat: ChatSummary
+  modelId: ModelId
   onChatUpdated: (chat: ChatSummary) => void
   onHistoryChanged: () => void
+  onModelChange: (model: ModelId) => void
 }) {
   const [input, setInput] = useState("")
   const persistedSessionId = useRef(chat.workflowSessionId)
+  // useEveAgent reads `headers` lazily per request, so a ref lets the picker
+  // change the model between turns without remounting the session.
+  const modelRef = useRef(modelId)
+  modelRef.current = modelId
   const agent = useEveAgent({
+    headers: () => ({ [MODEL_HEADER]: modelRef.current }),
     initialSession: chat.workflowSessionId
       ? { sessionId: chat.workflowSessionId, streamIndex: 0 }
       : undefined,
@@ -463,9 +480,12 @@ function ChatThread({
               value={input}
             />
             <InputGroupAddon align="block-end" className="justify-between">
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {agent.status === "ready" ? "Enter to send" : agent.status}
-              </span>
+              <div className="flex min-w-0 items-center gap-2">
+                <ModelPicker disabled={isResuming} onChange={onModelChange} value={modelId} />
+                <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">
+                  {agent.status === "ready" ? "Enter to send" : agent.status}
+                </span>
+              </div>
               {isBusy ? (
                 <InputGroupButton
                   aria-label="Stop response"
